@@ -3,10 +3,10 @@ using Spectre.Console.Cli;
 
 namespace cli;
 
-public class Initialize : Command<Flags>
+public class Initialize : AsyncCommand<Flags>
 {
     private static bool _verbose;
-    public override int Execute(CommandContext context, Flags settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, Flags settings, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(settings, nameof(settings));
         if (settings.Verbose)
@@ -28,12 +28,13 @@ public class Initialize : Command<Flags>
                 SetFlagvalue($"Please enter a value for '{prop.Name}': ", value, prop.PropertyType);
             }
         }
-        Console.WriteLine($"API: {settings.Api}");
-        Console.WriteLine($"Org: {settings.Org}");
-        Console.WriteLine($"Name: {settings.Name}");
-        Console.WriteLine($"Host: {settings.Host}");
-        Console.WriteLine($"Port: {settings.Port}");
-        Console.WriteLine($"Token: {settings.Token}");
+        //Console.WriteLine($"API: {settings.Api}");
+        //Console.WriteLine($"Org: {settings.Org}");
+        //Console.WriteLine($"Name: {settings.Name}");
+        //Console.WriteLine($"Host: {settings.Host}");
+        //Console.WriteLine($"Port: {settings.Port}");
+        //Console.WriteLine($"Token: {settings.Token}");
+        ConnectServer.Connect(settings);
         return 0;
     }
 

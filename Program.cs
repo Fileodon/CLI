@@ -4,9 +4,9 @@ namespace cli;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         var app = new CommandApp<Initialize>();
-        app.Run(args);
+        await app.RunAsync(args);
     }
 }

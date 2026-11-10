@@ -4,9 +4,23 @@ namespace cli;
 
 internal static class ConnectServer
 {
-    public static void Connect(Flags flags)
+    public static async Task Connect(Flags flags)
     {
+        if (flags.Delete)
+        {
+            Initialize.Log("Delete connection requested", true);
+            return;
+        }
 
+        if (string.IsNullOrEmpty(flags.Api) || flags.Org == 0 || string.IsNullOrEmpty(flags.Name) || string.IsNullOrEmpty(flags.Host) || flags.Port == 0 || string.IsNullOrEmpty(flags.Token))
+        {
+            Initialize.Log("One or more required flags are missing. Please provide all required flags.", true);
+            return;
+        }
+
+        int id = await SendRequest(flags);
+        string key = await PollRequest(flags, id);
+        SetupConnection.Setup(key);
     }
     private class IdRequest
     {
@@ -27,7 +41,7 @@ internal static class ConnectServer
         };
 
         using HttpClient client = new();
-        HttpContent content = new StringContent(JsonSerializer.Serialize(request), System.Text.Encoding.UTF8, "application/json");
+        using HttpContent content = new StringContent(JsonSerializer.Serialize(request), System.Text.Encoding.UTF8, "application/json");
         using var resp = await client.PostAsync(request.url, content);
         if (resp is null || !resp.IsSuccessStatusCode)
         {
@@ -46,7 +60,7 @@ internal static class ConnectServer
         {
             await Task.Delay(5000);
             using HttpClient client = new();
-            var url = $"{flags.Api}/api/organization/{flags.Org}/SFTPConnection/{id}";
+            var url = $"{flags.Api}/api/organization/{flags.Org}/sftpconnection/{id}/poll";
             using var resp = await client.GetAsync(url);
             if (resp is null || !resp.IsSuccessStatusCode)
             {

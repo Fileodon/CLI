@@ -125,7 +125,7 @@ internal static class ConnectServer
             if (type.status == 0)
             {
                 Initialize.Log("Polling success!", true);
-                return type.publickey;
+                return type.publicKey;
             }
 
             Initialize.Log("The connection has not been accepted yet.");

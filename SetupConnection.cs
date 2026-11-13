@@ -56,8 +56,8 @@ internal static class SetupConnection
     {
         var psi = new System.Diagnostics.ProcessStartInfo
         {
-            FileName = "sudo",
-            Arguments = "useradd -m -s /bin/bash -p * fileodon",
+            FileName = "su",
+            Arguments = "useradd -m -s /bin/bash -p '*' fileodon",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,

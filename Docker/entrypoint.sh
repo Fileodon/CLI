@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
 
-apt-get update && apt install unzip && apt install -y libicu-dev
+apt-get update && apt install -y unzip libicu-dev
 
 exec /entrypoint "$@"

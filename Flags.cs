@@ -21,7 +21,7 @@ public class Flags : CommandSettings
 
     [CommandOption("--org")]
     [Description("Organisation ID")]
-    public int Org { get; set; }
+    public int? Org { get; set; }
 
     [CommandOption("--name")]
     [Description("Server name")]
@@ -33,11 +33,11 @@ public class Flags : CommandSettings
 
     [CommandOption("--port")]
     [Description("Master server port")]
-    public int Port { get; set; }
+    public int? Port { get; set; }
 
-    [CommandOption("--token")]
-    [Description("API token")]
-    public string Token { get; set; }
+    //[CommandOption("--token")]
+    //[Description("API token")]
+    //public string Token { get; set; }
 
 }
 

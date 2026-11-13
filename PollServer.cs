@@ -1,6 +1,6 @@
 ﻿namespace cli;
 
-internal class PollingType
+internal class PollServer
 {
     public string publickey { get; set; }
     public int id { get; set; }

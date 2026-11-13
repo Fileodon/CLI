@@ -12,13 +12,13 @@ internal static class ConnectServer
             return;
         }
 
-        if (string.IsNullOrEmpty(flags.Api) || flags.Org == 0 || string.IsNullOrEmpty(flags.Name) || string.IsNullOrEmpty(flags.Host) || flags.Port == 0 || string.IsNullOrEmpty(flags.Token))
+        if (string.IsNullOrEmpty(flags.Api) || flags.Org == 0 || string.IsNullOrEmpty(flags.Name) || string.IsNullOrEmpty(flags.Host) || flags.Port == 0)
         {
             Initialize.Log("One or more required flags are missing. Please provide all required flags.", true);
             return;
         }
-
-        int id = await SendRequest(flags);
+        var authCode = await GetAuthCodeAsync(flags);
+        int id = await SendRequest(flags, authCode);
         string key = await PollRequest(flags, id);
         SetupConnection.Setup(key);
     }
@@ -27,17 +27,37 @@ internal static class ConnectServer
         public int id { get; set; }
     }
 
-    private static async Task<int> SendRequest(Flags flags)
+    private static async Task<AuthCode> GetAuthCodeAsync(Flags flags)
+    {
+        var url = $"{flags.Api}/api/organization/{flags.Org}/sftpconnection/requestcode";
+        using HttpClient client = new();
+        // GET?
+        using var resp = await client.PostAsync(url, null);
+        if (resp is null || !resp.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var content = await resp.Content.ReadAsStringAsync();
+        AuthCode? authCode = JsonSerializer.Deserialize<AuthCode>(content);
+        if (authCode is null)
+        {
+            return null;
+        }
+
+        return authCode;
+    }
+
+    private static async Task<int> SendRequest(Flags flags, AuthCode authCode)
     {
 
-        RequestType request = new()
+        PostServer request = new()
         {
             displayName = flags.Name,
-            organizationId = flags.Org,
             host = flags.Host,
-            port = flags.Port,
-            status = 2,
-            url = $"{flags.Api}/api/organization/{flags.Org}/SFTPConnection"
+            port = (int)flags.Port,
+            authCode = authCode.verificationCode,
+            url = $"{flags.Api}/api/organization/{flags.Org}/sftpconnection"
         };
 
         using HttpClient client = new();
@@ -74,7 +94,7 @@ internal static class ConnectServer
 
 
             var content = await resp.Content.ReadAsStringAsync();
-            PollingType type = JsonSerializer.Deserialize<PollingType>(content);
+            PollServer type = JsonSerializer.Deserialize<PollServer>(content);
 
             if (type.status == 0)
             {

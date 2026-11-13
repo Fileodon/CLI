@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Reflection;
+using System.Runtime.CompilerServices;
 using Spectre.Console.Cli;
 
 namespace cli;
@@ -25,16 +26,11 @@ public class Initialize : AsyncCommand<Flags>
             if (value == null || (value is string str && string.IsNullOrEmpty(str)))
             {
                 Log($"Flag '{prop.Name}' is not set. Prompting for value...");
-                SetFlagvalue($"Please enter a value for '{prop.Name}': ", value, prop.PropertyType);
+                SetFlagvalue($"Please enter a value for '{prop.Name}': ", settings, prop, prop.PropertyType);
             }
         }
-        //Console.WriteLine($"API: {settings.Api}");
-        //Console.WriteLine($"Org: {settings.Org}");
-        //Console.WriteLine($"Name: {settings.Name}");
-        //Console.WriteLine($"Host: {settings.Host}");
-        //Console.WriteLine($"Port: {settings.Port}");
-        //Console.WriteLine($"Token: {settings.Token}");
-        ConnectServer.Connect(settings);
+
+        await ConnectServer.Connect(settings);
         return 0;
     }
 
@@ -46,7 +42,7 @@ public class Initialize : AsyncCommand<Flags>
         }
     }
 
-    private void SetFlagvalue(string message, object flag, Type flagType)
+    private void SetFlagvalue(string message, object flag, PropertyInfo prop, Type flagType)
     {
         try
         {
@@ -63,7 +59,7 @@ public class Initialize : AsyncCommand<Flags>
                 {
                     if (int.TryParse(input, out int intValue))
                     {
-                        flag = intValue;
+                        prop.SetValue(flag, intValue);
                         break;
                     }
                     else
@@ -75,7 +71,7 @@ public class Initialize : AsyncCommand<Flags>
                 {
                     if (bool.TryParse(input, out bool boolValue))
                     {
-                        flag = boolValue;
+                        prop.SetValue(flag, boolValue);
                         break;
                     }
                     else
@@ -85,7 +81,7 @@ public class Initialize : AsyncCommand<Flags>
                 }
                 else if (flagType == typeof(string))
                 {
-                    flag = input;
+                    prop.SetValue(flag, input);
                 }
                 break;
             } while (true);

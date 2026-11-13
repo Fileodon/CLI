@@ -1,0 +1,39 @@
+services:
+  sftp:
+    image: atmoz/sftp:debian
+    environment:
+      - UID_MIN=0
+      - UID_MAX=6000
+    volumes:
+      - upload:/home/foo/upload
+      - ./sshd_config:/etc/ssh/sshd_config
+      - sftp_ssh:/etc/ssh
+      - ./entrypoint.sh:/entrypoint.sh
+      - ../artifacts/fileodon-cli-linux-x64.zip:/home/foo/upload/fileodon-cli-linux-x64.zip:ro
+    ports:
+      - "2222:22"
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    command: foo:pass:0:0
+
+  sftp2:
+    image: atmoz/sftp:debian
+    environment:
+      - UID_MIN=0
+      - UID_MAX=6000
+    volumes:
+      - upload:/home/poo/upload
+      - ./sshd_config:/etc/ssh/sshd_config
+      - sftp_ssh2:/etc/ssh
+      - ./entrypoint.sh:/entrypoint.sh
+      - ../artifacts/fileodon-cli-linux-x64.zip:/home/poo/upload/fileodon-cli-linux-x64.zip:ro
+    ports:
+      - "2223:22"
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    command: poo:pass:0:0
+
+volumes:
+  upload:
+  sftp_ssh:
+  sftp_ssh2:
+  sshd_config:
+    external: true

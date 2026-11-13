@@ -34,8 +34,7 @@ public class Initialize : AsyncCommand<Flags>
         //Console.WriteLine($"Host: {settings.Host}");
         //Console.WriteLine($"Port: {settings.Port}");
         //Console.WriteLine($"Token: {settings.Token}");
-        ConnectServer.Connect(settings);
-        return 0;
+        return await ConnectServer.Connect(settings);
     }
 
     public static void Log(string message, bool force = false, [CallerFilePath] string filePath = "", [CallerLineNumber] int lineNumber = 0, [CallerMemberName] string memberName = "")

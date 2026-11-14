@@ -1,25 +1,14 @@
-﻿using System.Security.Cryptography;
-using Mono.Unix;
+﻿using Mono.Unix;
 
 namespace cli;
 
 internal static class SetupConnection
 {
-
-
-    public static void Setup(string key)
+    public static async Task Setup(string key)
     {
-        try
-        {
-            CreateUser();
-            var paths = CreateDirectories(key);
-            SetUserPermissions(paths);
-        }
-        catch (Exception)
-        {
-
-            throw;
-        }
+        await CreateUser();
+        var paths = CreateDirectories(key);
+        SetUserPermissions(paths);
     }
 
     private static string[] CreateDirectories(string key)
@@ -27,83 +16,83 @@ internal static class SetupConnection
         var authorizedKeysPath = Path.Combine("/home/fileodon", ".ssh", "authorized_keys");
         var sshPath = Path.Combine("/home/fileodon", ".ssh");
         Directory.CreateDirectory(sshPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
-        File.AppendAllLines(authorizedKeysPath, [key], System.Text.Encoding.UTF8);
+        File.SetUnixFileMode(sshPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        File.AppendAllText(authorizedKeysPath, key + Environment.NewLine, new System.Text.UTF8Encoding(false));
+        File.SetUnixFileMode(authorizedKeysPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
         var uploadPath = Path.Combine("/home/fileodon", "upload");
-        // 0o600 permissions for the upload directory
         Directory.CreateDirectory(uploadPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        File.SetUnixFileMode(uploadPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         return [sshPath, authorizedKeysPath, uploadPath];
     }
 
-    private static byte[] GenerateKey(int size)
+    private static async Task CreateUser()
     {
-        var key = RSA.Create(size);
-        if (key is null)
+        if (UnixUserInfo.GetLocalUsers()
+            .Any(x => x.UserName.Equals("fileodon", StringComparison.OrdinalIgnoreCase)))
         {
-            Initialize.Log("Failed to generate RSA key pair.");
-            return null;
+            return;
         }
 
-        var privateKey = key.ExportRSAPrivateKey();
-        if (privateKey is null)
+        var startInfo = new System.Diagnostics.ProcessStartInfo
         {
-            Initialize.Log("Failed to export RSA private key.");
-            return null;
-        }
-        return privateKey;
-    }
-
-    private static void CreateUser()
-    {
-        var psi = new System.Diagnostics.ProcessStartInfo
-        {
-            FileName = "su",
-            Arguments = "useradd -m -s /bin/bash -p '*' fileodon",
+            FileName = "useradd",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
-        System.Diagnostics.Process.Start(psi);
+        startInfo.ArgumentList.Add("-U");
+        startInfo.ArgumentList.Add("-m");
+        startInfo.ArgumentList.Add("-s");
+        startInfo.ArgumentList.Add("/bin/bash");
+        startInfo.ArgumentList.Add("-p");
+        startInfo.ArgumentList.Add("*");
+        startInfo.ArgumentList.Add("fileodon");
 
-        Task.WaitAll(
-            Task.Run(() =>
-            {
-                var process = System.Diagnostics.Process.Start(psi);
-                if (process is null)
-                {
-                    Initialize.Log("Failed to start useradd process.");
-                    return;
-                }
-                process.WaitForExit();
-                if (process.ExitCode != 0)
-                {
-                    Initialize.Log($"useradd process exited with code {process.ExitCode}.");
-                    return;
-                }
-            })
-        );
+        using var process = System.Diagnostics.Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Failed to start useradd process.");
+        var standardOutput = process.StandardOutput.ReadToEndAsync();
+        var standardError = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        await standardOutput;
+        var error = await standardError;
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"useradd process exited with code {process.ExitCode}: {error.Trim()}");
+        }
     }
 
     private static void SetUserPermissions(string[] paths)
     {
         if (paths is null || paths.Length == 0)
         {
-            Initialize.Log("No paths provided for setting user permissions.");
-            return;
+            throw new ArgumentException("No paths provided for setting user permissions.", nameof(paths));
+        }
+
+        var user = UnixUserInfo.GetLocalUsers()
+            .FirstOrDefault(x => x.UserName.Equals("fileodon", StringComparison.OrdinalIgnoreCase));
+        var group = UnixGroupInfo.GetLocalGroups()
+            .FirstOrDefault(x => x.GroupName.Equals("fileodon", StringComparison.OrdinalIgnoreCase));
+        if (user is null || group is null)
+        {
+            throw new InvalidOperationException("Could not find the fileodon user and group after creating the account.");
         }
 
         foreach (string path in paths)
         {
-            if (!File.Exists(path) && !Directory.Exists(path))
+            if (Directory.Exists(path))
             {
-                Initialize.Log($"Path does not exist: {path}");
-                continue;
+                new UnixDirectoryInfo(path).SetOwner(user, group);
             }
-
-            var user = UnixUserInfo.GetLocalUsers().FirstOrDefault(x => x.UserName.Equals("fileodon", StringComparison.OrdinalIgnoreCase));
-            var group = UnixGroupInfo.GetLocalGroups().FirstOrDefault(x => x.GroupName.Equals("fileodon", StringComparison.OrdinalIgnoreCase));
-            new UnixDirectoryInfo(path).SetOwner(user, group);
-
+            else if (File.Exists(path))
+            {
+                new UnixFileInfo(path).SetOwner(user, group);
+            }
+            else
+            {
+                throw new FileNotFoundException($"Path does not exist: {path}", path);
+            }
         }
     }
 }

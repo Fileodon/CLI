@@ -52,7 +52,7 @@ internal static class ConnectServer
         }
 
         Initialize.Log("Installing the returned SSH key locally.");
-        SetupConnection.Setup(key);
+        await SetupConnection.Setup(key);
         return 0;
     }
     private class IdRequest

@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Runtime.InteropServices;
+using System.Text.Json;
 
 namespace cli;
 
@@ -12,24 +13,24 @@ internal static class ConnectServer
             return 0;
         }
 
-        if (string.IsNullOrEmpty(flags.Api) || flags.Org == 0 || string.IsNullOrEmpty(flags.Name) || string.IsNullOrEmpty(flags.Host) || flags.Port == 0 || string.IsNullOrEmpty(flags.Token))
+        if (string.IsNullOrEmpty(flags.Api) || string.IsNullOrEmpty(flags.AuthCode))
         {
             Initialize.Log("One or more required flags are missing. Please provide all required flags.", true);
             return 1;
         }
 
-        int id;
+        IdRequest idRequest;
         try
         {
-            id = await SendRequest(flags);
+            idRequest = await SendRequest(flags);
         }
         catch (HttpRequestException ex)
         {
-            Initialize.Log($"Could not send the registration request: {ex.Message}", true);
+            Initialize.Log($"Could not send the registration request: {ex.InnerException?.Message ?? ex.Message}", true);
             return 1;
         }
 
-        if (id <= 0)
+        if (idRequest is null || idRequest.id <= 0)
         {
             return 1;
         }
@@ -37,7 +38,7 @@ internal static class ConnectServer
         string key;
         try
         {
-            key = await PollRequest(flags, id);
+            key = await PollRequest(flags, idRequest.id, idRequest.organizationId);
         }
         catch (HttpRequestException ex)
         {
@@ -51,6 +52,11 @@ internal static class ConnectServer
             return 1;
         }
 
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            return 0;
+        }
+
         Initialize.Log("Installing the returned SSH key locally.");
         await SetupConnection.Setup(key);
         return 0;
@@ -58,27 +64,32 @@ internal static class ConnectServer
     private class IdRequest
     {
         public int id { get; set; }
+        public int organizationId { get; set; }
+        public string displayName { get; set; }
+        public string host { get; set; }
+        public int port { get; set; }
+        public string status { get; set; }
+        public string publicKey { get; set; }
     }
 
-    private static async Task<int> SendRequest(Flags flags)
+    private static async Task<IdRequest> SendRequest(Flags flags)
     {
         RequestType request = new()
         {
-            authCode = flags.Token,
-            displayName = flags.Name,
+            authCode = flags.AuthCode,
             host = flags.Host,
-            port = flags.Port,
-            url = $"{flags.Api}/api/organization/{flags.Org}/sftpconnection"
+            port = flags.Port ?? 0,
+            url = $"{flags.Api}/api/organization/sftpconnection"
         };
 
-        Initialize.Log($"Sending connection request to {request.url}.");
+        Initialize.Log($"Sending connection request to {request.url}");
         using HttpClient client = new();
         using HttpContent content = new StringContent(JsonSerializer.Serialize(request), System.Text.Encoding.UTF8, "application/json");
         using var resp = await client.PostAsync(request.url, content);
         if (!resp.IsSuccessStatusCode)
         {
             Initialize.Log($"Registration request failed with HTTP {(int)resp.StatusCode} ({resp.StatusCode}).", true);
-            return -1;
+            return null;
         }
 
         var responseContent = await resp.Content.ReadAsStringAsync();
@@ -86,14 +97,14 @@ internal static class ConnectServer
         if (idRequest is null || idRequest.id <= 0)
         {
             Initialize.Log("The API response did not contain a valid connection ID.", true);
-            return -1;
+            return null;
         }
 
         Initialize.Log($"Connection request accepted with ID {idRequest.id}.");
-        return idRequest.id;
+        return idRequest;
     }
 
-    private static async Task<string> PollRequest(Flags flags, int id)
+    private static async Task<string> PollRequest(Flags flags, int id, int orgid)
     {
         int errCount = 0;
         while (true)
@@ -101,7 +112,7 @@ internal static class ConnectServer
             Initialize.Log("Waiting 5 seconds before checking whether the connection was accepted.");
             await Task.Delay(5000);
             using HttpClient client = new();
-            var url = $"{flags.Api}/api/organization/{flags.Org}/sftpconnection/{id}/poll";
+            var url = $"{flags.Api}/api/organization/{orgid}/sftpconnection/{id}/poll";
             using var resp = await client.GetAsync(url);
             if (!resp.IsSuccessStatusCode)
             {

@@ -2,8 +2,10 @@ all:
 	dotnet run
 build:
 	dotnet build
+partial:
+	sudo dotnet run BNHCPTAW --verbose=true --api="http://172.28.48.1:5283"
 full:
-	dotnet run --verbose=true --api="https://api.dev.fileodon.dev" --token="your_token_here" --name="Please" --org=1 --port=22 --host="158.220.124.100"
+	dotnet run LZVMWTOL --verbose=true --api="https://127.0.0.1:7248" --name="automatic_run" --port=22
 jakob:
 	dotnet run --verbose=true --port=2222 --host="127.0.0.1" --name="Jakob"
 delete:

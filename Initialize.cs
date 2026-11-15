@@ -20,6 +20,38 @@ public class Initialize : AsyncCommand<Flags>
             Console.WriteLine("Delete connection requested");
         }
 
+        if (string.IsNullOrEmpty(settings.AuthCode))
+        {
+            while (true)
+            {
+                Console.Write("Authentication code: ");
+                string? input = Console.ReadLine();
+                if (string.IsNullOrEmpty(input) || input.Length != 8)
+                {
+                    continue;
+                }
+
+                settings.AuthCode = input;
+                break;
+            }
+        }
+
+        if (string.IsNullOrEmpty(settings.Api))
+        {
+            while (true)
+            {
+                Console.Write("API URL: ");
+                string? input = Console.ReadLine();
+                if (string.IsNullOrEmpty(input))
+                {
+                    continue;
+                }
+
+                settings.Api = input;
+                break;
+            }
+        }
+
         if (string.IsNullOrEmpty(settings.Host))
         {
             var ip = await FetchPublicIp();
@@ -32,6 +64,7 @@ public class Initialize : AsyncCommand<Flags>
 
         return await ConnectServer.Connect(settings);
     }
+
 
     private static async Task<string> FetchPublicIp()
     {

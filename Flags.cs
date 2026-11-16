@@ -35,6 +35,11 @@ public class Flags : CommandSettings
     [Description("Master server port")]
     public int? Port { get; set; }
 
+    [CommandOption("--public-key-path")]
+    [Description("Path to save the received public key in PEM format")]
+    [DefaultValue("/opt/pam-auth/public.pem")]
+    public string PublicKeyPath { get; set; } = "/opt/pam-auth/public.pem";
+
     //[CommandOption("--token")]
     //[Description("API token")]
     //public string Token { get; set; }

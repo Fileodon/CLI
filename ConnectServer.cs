@@ -20,7 +20,7 @@ internal static class ConnectServer
         var authCode = await GetAuthCodeAsync(flags);
         int id = await SendRequest(flags, authCode);
         string key = await PollRequest(flags, id);
-        SetupConnection.Setup(key);
+        SetupConnection.Setup(key, flags.PublicKeyPath);
     }
     private class IdRequest
     {

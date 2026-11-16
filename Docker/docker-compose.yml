@@ -21,7 +21,7 @@ services:
       - UID_MIN=0
       - UID_MAX=6000
     volumes:
-      - upload:/home/poo/upload
+      - upload2:/home/poo/upload
       - ./sshd_config:/etc/ssh/sshd_config
       - sftp_ssh2:/etc/ssh
       - ./entrypoint.sh:/entrypoint.sh
@@ -33,6 +33,7 @@ services:
 
 volumes:
   upload:
+  upload2:
   sftp_ssh:
   sftp_ssh2:
   sshd_config:

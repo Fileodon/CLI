@@ -46,6 +46,7 @@ public class Initialize : AsyncCommand<Flags>
     {
         try
         {
+            Type valueType = Nullable.GetUnderlyingType(flagType) ?? flagType;
             do
             {
                 Console.Write(message);
@@ -55,7 +56,7 @@ public class Initialize : AsyncCommand<Flags>
                     continue;
                 }
 
-                if (flagType == typeof(int))
+                if (valueType == typeof(int))
                 {
                     if (int.TryParse(input, out int intValue))
                     {
@@ -67,7 +68,7 @@ public class Initialize : AsyncCommand<Flags>
                         Console.WriteLine("Invalid input. Please enter a valid integer.");
                     }
                 }
-                else if (flagType == typeof(bool))
+                else if (valueType == typeof(bool))
                 {
                     if (bool.TryParse(input, out bool boolValue))
                     {

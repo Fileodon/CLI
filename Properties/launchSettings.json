@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "cli": {
+      "commandName": "Project",
+      "commandLineArgs": "3L96A2KJ --verbose=true --api=\"http://172.28.48.1:5283\""
+    },
+    "WSL": {
+      "commandName": "WSL2",
+      "distributionName": ""
+    }
+  }
+}

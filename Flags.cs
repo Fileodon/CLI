@@ -5,6 +5,9 @@ namespace cli;
 
 public class Flags : CommandSettings
 {
+    [CommandArgument(0, "<authcode>")]
+    [Description("Generated authentication code from the website")]
+    public string AuthCode { get; set; }
     [CommandOption("-v|--verbose")]
     [Description("Enable verbose output")]
     [DefaultValue(false)]
@@ -19,25 +22,12 @@ public class Flags : CommandSettings
     [DefaultValue("")]
     public string Api { get; set; }
 
-    [CommandOption("--org")]
-    [Description("Organisation ID")]
-    public int? Org { get; set; }
-
-    [CommandOption("--name")]
-    [Description("Server name")]
-    public string Name { get; set; }
-
     [CommandOption("--host")]
     [Description("Master server host")]
-    public string Host { get; set; }
+    public string? Host { get; set; }
 
     [CommandOption("--port")]
     [Description("Master server port")]
     public int? Port { get; set; }
-
-    //[CommandOption("--token")]
-    //[Description("API token")]
-    //public string Token { get; set; }
-
 }
 

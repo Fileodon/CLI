@@ -20,18 +20,56 @@ public class Initialize : AsyncCommand<Flags>
             Console.WriteLine("Delete connection requested");
         }
 
-        foreach (var prop in typeof(Flags).GetProperties())
+        if (string.IsNullOrEmpty(settings.AuthCode))
         {
-            var value = prop.GetValue(settings);
-            if (value == null || (value is string str && string.IsNullOrEmpty(str)))
+            while (true)
             {
-                Log($"Flag '{prop.Name}' is not set. Prompting for value...");
-                SetFlagvalue($"Please enter a value for '{prop.Name}': ", settings, prop, prop.PropertyType);
+                Console.Write("Authentication code: ");
+                string? input = Console.ReadLine();
+                if (string.IsNullOrEmpty(input) || input.Length != 8)
+                {
+                    continue;
+                }
+
+                settings.AuthCode = input;
+                break;
             }
         }
 
-        await ConnectServer.Connect(settings);
-        return 0;
+        if (string.IsNullOrEmpty(settings.Api))
+        {
+            while (true)
+            {
+                Console.Write("API URL: ");
+                string? input = Console.ReadLine();
+                if (string.IsNullOrEmpty(input))
+                {
+                    continue;
+                }
+
+                settings.Api = input;
+                break;
+            }
+        }
+
+        if (string.IsNullOrEmpty(settings.Host))
+        {
+            var ip = await FetchPublicIp();
+            if (string.IsNullOrEmpty(ip))
+            {
+                throw new Exception("Could not fetch public IP address. Please provide the --host flag.");
+            }
+            settings.Host = ip;
+        }
+
+        return await ConnectServer.Connect(settings);
+    }
+
+
+    private static async Task<string> FetchPublicIp()
+    {
+        using HttpClient client = new();
+        return await client.GetStringAsync("https://api.ipify.org");
     }
 
     public static void Log(string message, bool force = false, [CallerFilePath] string filePath = "", [CallerLineNumber] int lineNumber = 0, [CallerMemberName] string memberName = "")
@@ -42,7 +80,7 @@ public class Initialize : AsyncCommand<Flags>
         }
     }
 
-    private void SetFlagvalue(string message, object flag, PropertyInfo prop, Type flagType)
+    private void SetFlagvalue(string message, Flags settings, PropertyInfo prop, Type flagType)
     {
         try
         {
@@ -59,7 +97,7 @@ public class Initialize : AsyncCommand<Flags>
                 {
                     if (int.TryParse(input, out int intValue))
                     {
-                        prop.SetValue(flag, intValue);
+                        prop.SetValue(settings, intValue);
                         break;
                     }
                     else
@@ -71,7 +109,7 @@ public class Initialize : AsyncCommand<Flags>
                 {
                     if (bool.TryParse(input, out bool boolValue))
                     {
-                        prop.SetValue(flag, boolValue);
+                        prop.SetValue(settings, boolValue);
                         break;
                     }
                     else
@@ -81,7 +119,7 @@ public class Initialize : AsyncCommand<Flags>
                 }
                 else if (flagType == typeof(string))
                 {
-                    prop.SetValue(flag, input);
+                    prop.SetValue(settings, input);
                 }
                 break;
             } while (true);

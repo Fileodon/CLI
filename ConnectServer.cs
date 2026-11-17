@@ -1,90 +1,123 @@
-﻿using System.Text.Json;
+﻿using System.Runtime.InteropServices;
+using System.Text.Json;
 
 namespace cli;
 
 internal static class ConnectServer
 {
-    public static async Task Connect(Flags flags)
+    public static async Task<int> Connect(Flags flags)
     {
         if (flags.Delete)
         {
             Initialize.Log("Delete connection requested", true);
-            return;
+            return 0;
         }
 
-        if (string.IsNullOrEmpty(flags.Api) || flags.Org == 0 || string.IsNullOrEmpty(flags.Name) || string.IsNullOrEmpty(flags.Host) || flags.Port == 0)
+        if (string.IsNullOrEmpty(flags.Api) || string.IsNullOrEmpty(flags.AuthCode))
         {
             Initialize.Log("One or more required flags are missing. Please provide all required flags.", true);
-            return;
+            return 1;
         }
-        var authCode = await GetAuthCodeAsync(flags);
-        int id = await SendRequest(flags, authCode);
-        string key = await PollRequest(flags, id);
-        SetupConnection.Setup(key);
+
+        IdRequest idRequest;
+        try
+        {
+            idRequest = await SendRequest(flags);
+        }
+        catch (HttpRequestException ex)
+        {
+            Initialize.Log($"Could not send the registration request: {ex.InnerException?.Message ?? ex.Message}", true);
+            return 1;
+        }
+
+        if (idRequest is null || idRequest.id <= 0)
+        {
+            return 1;
+        }
+
+        string key;
+        try
+        {
+            key = await PollRequest(flags, idRequest.id, idRequest.organizationId);
+        }
+        catch (HttpRequestException ex)
+        {
+            Initialize.Log($"Could not poll the registration request: {ex.Message}", true);
+            return 1;
+        }
+
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            Initialize.Log("The API did not return an SSH public key; connection setup was not performed.", true);
+            return 1;
+        }
+
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            return 0;
+        }
+
+        Initialize.Log("Installing the returned SSH key locally.");
+        await SetupConnection.Setup(key);
+        return 0;
     }
     private class IdRequest
     {
         public int id { get; set; }
+        public int organizationId { get; set; }
+        public string displayName { get; set; }
+        public string host { get; set; }
+        public int port { get; set; }
+        public string status { get; set; }
+        public string publicKey { get; set; }
     }
 
-    private static async Task<AuthCode> GetAuthCodeAsync(Flags flags)
+    private static async Task<IdRequest> SendRequest(Flags flags)
     {
-        var url = $"{flags.Api}/api/organization/{flags.Org}/sftpconnection/requestcode";
-        using HttpClient client = new();
-        // GET?
-        using var resp = await client.PostAsync(url, null);
-        if (resp is null || !resp.IsSuccessStatusCode)
+        RequestType request = new()
         {
-            return null;
-        }
-
-        var content = await resp.Content.ReadAsStringAsync();
-        AuthCode? authCode = JsonSerializer.Deserialize<AuthCode>(content);
-        if (authCode is null)
-        {
-            return null;
-        }
-
-        return authCode;
-    }
-
-    private static async Task<int> SendRequest(Flags flags, AuthCode authCode)
-    {
-
-        PostServer request = new()
-        {
-            displayName = flags.Name,
+            authCode = flags.AuthCode,
             host = flags.Host,
-            port = (int)flags.Port,
-            authCode = authCode.verificationCode,
-            url = $"{flags.Api}/api/organization/{flags.Org}/sftpconnection"
+            port = flags.Port ?? 0,
+            url = $"{flags.Api}/api/organization/sftpconnection"
         };
 
+        Initialize.Log($"Sending connection request to {request.url}");
         using HttpClient client = new();
         using HttpContent content = new StringContent(JsonSerializer.Serialize(request), System.Text.Encoding.UTF8, "application/json");
         using var resp = await client.PostAsync(request.url, content);
-        if (resp is null || !resp.IsSuccessStatusCode)
+        if (!resp.IsSuccessStatusCode)
         {
-            return -1;
+            Initialize.Log($"Registration request failed with HTTP {(int)resp.StatusCode} ({resp.StatusCode}).", true);
+            return null;
         }
 
         var responseContent = await resp.Content.ReadAsStringAsync();
         var idRequest = JsonSerializer.Deserialize<IdRequest>(responseContent);
-        return idRequest is null ? -1 : idRequest.id;
+        if (idRequest is null || idRequest.id <= 0)
+        {
+            Initialize.Log("The API response did not contain a valid connection ID.", true);
+            return null;
+        }
+
+        Initialize.Log($"Connection request accepted with ID {idRequest.id}.");
+        return idRequest;
     }
 
-    private static async Task<string> PollRequest(Flags flags, int id)
+    private static async Task<string> PollRequest(Flags flags, int id, int orgid)
     {
         int errCount = 0;
         while (true)
         {
+            Initialize.Log("Waiting 5 seconds before checking whether the connection was accepted.");
             await Task.Delay(5000);
             using HttpClient client = new();
-            var url = $"{flags.Api}/api/organization/{flags.Org}/sftpconnection/{id}/poll";
+            var url = $"{flags.Api}/api/organization/{orgid}/sftpconnection/{id}/poll";
             using var resp = await client.GetAsync(url);
-            if (resp is null || !resp.IsSuccessStatusCode)
+            if (!resp.IsSuccessStatusCode)
             {
                 errCount++;
+                Initialize.Log($"Polling failed with HTTP {(int)resp.StatusCode} ({resp.StatusCode}); attempt {errCount} of 4.", true);
                 if (errCount > 3)
                 {
                     return string.Empty;
@@ -92,19 +125,21 @@ internal static class ConnectServer
                 continue;
             }
 
-
             var content = await resp.Content.ReadAsStringAsync();
-            PollServer type = JsonSerializer.Deserialize<PollServer>(content);
+            PollingType? type = JsonSerializer.Deserialize<PollingType>(content);
+            if (type is null)
+            {
+                Initialize.Log("The API returned an invalid polling response.", true);
+                return string.Empty;
+            }
 
             if (type.status == 0)
             {
                 Initialize.Log("Polling success!", true);
-                return type.publickey;
+                return type.publicKey;
             }
-            else
-            {
-                Initialize.Log("Polling has not been accepted yet, retrying in 5 seconds!", true);
-            }
+
+            Initialize.Log("The connection has not been accepted yet.");
         }
     }
 }

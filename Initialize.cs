@@ -54,7 +54,7 @@ public class Initialize : AsyncCommand<Flags>
 
         if (string.IsNullOrEmpty(settings.Host))
         {
-            var ip = await FetchPublicIp();
+            var ip = await FetchPublicIp(settings.Api);
             if (string.IsNullOrEmpty(ip))
             {
                 throw new Exception("Could not fetch public IP address. Please provide the --host flag.");
@@ -66,10 +66,10 @@ public class Initialize : AsyncCommand<Flags>
     }
 
 
-    private static async Task<string> FetchPublicIp()
+    private static async Task<string> FetchPublicIp(string api)
     {
         using HttpClient client = new();
-        return await client.GetStringAsync("https://api.ipify.org");
+        return await client.GetStringAsync($"{api}/api/auth/ip");
     }
 
     public static void Log(string message, bool force = false, [CallerFilePath] string filePath = "", [CallerLineNumber] int lineNumber = 0, [CallerMemberName] string memberName = "")

@@ -78,7 +78,7 @@ internal static class ConnectServer
         {
             authCode = flags.AuthCode,
             host = flags.Host,
-            port = flags.Port ?? 0,
+            port = flags.Port ?? 22,
             url = $"{flags.Api}/api/organization/sftpconnection"
         };
 

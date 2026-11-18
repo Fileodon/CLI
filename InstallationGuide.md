@@ -6,7 +6,7 @@ Denne guide er til hvis du bare vil køre projektet uden viden omkring det. Den 
 * (optional) Docker 
 
 ## Build
-* byg til linux
+* byg til linux fra windows
 ```sh
 dotnet publish .\cli.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -o .\artifacts\linux-x64
 Compress-Archive -Path .\artifacts\linux-x64\* -DestinationPath .\artifacts\fileodon-cli-linux-x64.zip -Force
@@ -24,7 +24,7 @@ mkdir -p fileodon-cli
 unzip fileodon-cli-linux-x64.zip -d fileodon-cli
 cd fileodon-cli
 chmod +x ./cli
-./cli <Kode fra admin panelet> --verbose=true --api="http://host.docker.internal:5283"  --org=<Org id fra admin panelet> --port=2222 --host=127.0.0.1
+sudo ./cli <Kode fra admin panelet> --verbose=true --api="http://host.docker.internal:5283" --port=2222 --host=127.0.0.1
 ```
 * info: port og host er optional, port 22 vil blive brugt pr standart, og host fundet ud fra extern service. 
 * For at se alle muligheder
@@ -35,4 +35,4 @@ chmod +x ./cli
 * accepter derefter forbindsel i admin panelet, og forbindelsen opsættes næste gang der bliver pollet, indenfor 5 sekunder.
 
 
-./cli XSNDC8S9 --verbose=true --api="http://host.docker.internal:5283"  --name="Pleas" --org=19 --port=2222 --host=127.0.0.1
+sudo ./cli XSNDC8S9 --verbose=true --api="http://host.docker.internal:5283" --port=2222 --host=127.0.0.1

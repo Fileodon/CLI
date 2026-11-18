@@ -26,7 +26,7 @@ cd fileodon-cli
 chmod +x ./cli
 sudo ./cli <Kode fra admin panelet> --verbose=true --api="http://host.docker.internal:5283" --port=2222 --host=127.0.0.1
 ```
-* info: port og host er optional, port 22 vil blive brugt pr standart, og host fundet ud fra extern service. 
+* info: port og host er optional, port 22 vil blive brugt pr standart, og host fundet ud fra et endpoint fra den indtastet API. 
 * For at se alle muligheder
 ```sh
 ./cli --help

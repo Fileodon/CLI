@@ -18,6 +18,11 @@ internal static class ConnectServer
             Initialize.Log("One or more required flags are missing. Please provide all required flags.", true);
             return 1;
         }
+        if (flags.ApiPort is null or < 1 or > 65535)
+        {
+            Initialize.Log("The intermediary API port must be specified and be between 1 and 65535.", true);
+            return 1;
+        }
 
         IdRequest idRequest;
         try
@@ -79,6 +84,7 @@ internal static class ConnectServer
             authCode = flags.AuthCode,
             host = flags.Host,
             port = flags.Port ?? 22,
+            intermediaryPort = flags.ApiPort.Value,
             url = $"{flags.Api}/api/organization/sftpconnection"
         };
 

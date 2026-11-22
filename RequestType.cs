@@ -10,4 +10,5 @@ internal class RequestType
     public string? displayName { get; set; }
     public string host { get; set; }
     public int? port { get; set; }
+    public int intermediaryPort { get; set; }
 }

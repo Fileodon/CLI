@@ -27,7 +27,7 @@ sudo ./cli <autentificeringskode>
 Du kan også angive værdier som optioner:
 
 ```sh
-sudo ./cli <autentificeringskode> --api="https://din-api-url" --host="din-server" --port=22 --verbose=true
+sudo ./cli <autentificeringskode> --api="https://din-api-url" --api-port=5096 --host="din-server" --port=22 --verbose=true
 ```
 
 Se alle tilgængelige optioner med:

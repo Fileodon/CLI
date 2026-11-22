@@ -27,7 +27,11 @@ public class Flags : CommandSettings
     public string? Host { get; set; }
 
     [CommandOption("--port")]
-    [Description("Master server port")]
+    [Description("SFTP server SSH port")]
     public int? Port { get; set; }
+
+    [CommandOption("--api-port")]
+    [Description("Intermediary API port")]
+    public int? ApiPort { get; set; }
 }
 
